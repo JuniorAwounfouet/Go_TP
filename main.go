@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -100,7 +101,7 @@ func ajouterContact(reader *bufio.Reader) {
 	fmt.Println("Contact ajouté")
 }
 
-// Liste tous les contacts
+// Liste tous les contacts (affichage console)
 func listerContacts() {
 	if len(contacts) == 0 {
 		fmt.Println("Aucun contact trouvé")
@@ -110,6 +111,65 @@ func listerContacts() {
 	for _, c := range contacts {
 		c.afficher()
 	}
+}
+
+// Liste tous les contacts (JSON)
+func listerContactsJSON() {
+	type contactJSON struct {
+		ID    int    `json:"id"`
+		Nom   string `json:"nom"`
+		Email string `json:"email"`
+	}
+	var out []contactJSON
+	for _, c := range contacts {
+		out = append(out, contactJSON{ID: c.id, Nom: c.nom, Email: c.email})
+	}
+	data, _ := json.MarshalIndent(out, "", "  ")
+	fmt.Println(string(data))
+}
+
+// Charge des contacts depuis un fichier JSON
+func chargerContactsDepuisJSON(path string) error {
+	type contactJSON struct {
+		ID    int    `json:"id"`
+		Nom   string `json:"nom"`
+		Email string `json:"email"`
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	var input []contactJSON
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&input); err != nil {
+		return err
+	}
+	for _, c := range input {
+		contact, err := NewContact(c.ID, c.Nom, c.Email)
+		if err == nil {
+			contacts[c.ID] = contact
+		}
+	}
+	return nil
+}
+
+// Sauvegarde les contacts dans un fichier JSON
+func sauvegarderContactsJSON(path string) error {
+	type contactJSON struct {
+		ID    int    `json:"id"`
+		Nom   string `json:"nom"`
+		Email string `json:"email"`
+	}
+	var out []contactJSON
+	for _, c := range contacts {
+		out = append(out, contactJSON{ID: c.id, Nom: c.nom, Email: c.email})
+	}
+	data, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 // Supprime un contact par ID
@@ -160,12 +220,23 @@ func mettreAJourContact(reader *bufio.Reader) {
 }
 
 func main() {
-	// Utilisation des flags pour ajout direct
+	// Utilisation des flags pour ajout direct et JSON
 	flagAjouter := flag.Bool("ajouter", false, "Ajouter un contact")
 	flagID := flag.Int("id", 0, "ID du contact")
 	flagNom := flag.String("nom", "", "Nom du contact")
 	flagEmail := flag.String("email", "", "Email du contact")
+	flagImport := flag.String("import", "", "Charger des contacts depuis un fichier JSON")
+	flagExport := flag.String("export", "", "Exporter les contacts au format JSON")
+	flagJSON := flag.Bool("json", false, "Afficher la liste des contacts au format JSON")
 	flag.Parse()
+
+	if *flagImport != "" {
+		if err := chargerContactsDepuisJSON(*flagImport); err != nil {
+			fmt.Println("Erreur lors de l'import :", err)
+			return
+		}
+		fmt.Println("Contacts importés depuis", *flagImport)
+	}
 
 	if *flagAjouter {
 		if *flagID == 0 || *flagNom == "" || *flagEmail == "" {
@@ -173,6 +244,19 @@ func main() {
 			return
 		}
 		ajouterContactCLI(*flagID, *flagNom, *flagEmail)
+	}
+
+	if *flagExport != "" {
+		if err := sauvegarderContactsJSON(*flagExport); err != nil {
+			fmt.Println("Erreur lors de l'export :", err)
+			return
+		}
+		fmt.Println("Contacts exportés vers", *flagExport)
+		return
+	}
+
+	if *flagJSON {
+		listerContactsJSON()
 		return
 	}
 
@@ -183,7 +267,8 @@ func main() {
 		fmt.Println("2. Lister les contacts")
 		fmt.Println("3. Supprimer un contact")
 		fmt.Println("4. Mettre à jour un contact")
-		fmt.Println("5. Quitter")
+		fmt.Println("5. Exporter les contacts (JSON)")
+		fmt.Println("6. Quitter")
 
 		fmt.Print("Choisissez une option: ")
 		input, _ := reader.ReadString('\n')
@@ -199,6 +284,14 @@ func main() {
 		case "4":
 			mettreAJourContact(reader)
 		case "5":
+			fmt.Print("Chemin du fichier JSON à créer : ")
+			path := readLine(reader)
+			if err := sauvegarderContactsJSON(path); err != nil {
+				fmt.Println("Erreur lors de l'export :", err)
+			} else {
+				fmt.Println("Contacts exportés vers", path)
+			}
+		case "6":
 			fmt.Println("Au revoir :)")
 			return
 		default:
