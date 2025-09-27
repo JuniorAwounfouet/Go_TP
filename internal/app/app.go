@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/JuniorAwounfouet/go-crm-app/internal/storage"
+	"minicrm/internal/storage"
 )
 
 func Run(store storage.Storer) {
@@ -45,10 +45,6 @@ func Run(store storage.Storer) {
 		}
 	}
 }
-
-// Les fonctions "handle..." s'occupent de l'interaction avec l'utilisateur
-// et elles appellent la couche de stockage (store) pour effectuer les opérations.
-// Elles sont découplées du stockage : elles fonctionnent avec n'importe quel storer
 
 func handleAddContact(reader *bufio.Reader, storer storage.Storer) {
 	fmt.Print("Enter contact name: ")

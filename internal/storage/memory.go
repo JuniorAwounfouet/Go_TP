@@ -59,3 +59,5 @@ func (ms *MemoryStore) Delete(id int) error {
 	delete(ms.contacts, id)
 	return nil
 }
+
+func (ms *MemoryStore) Close() error { return nil }

@@ -1,0 +1,9 @@
+# Configuration for minicrm
+# type : "memory", "json", "gorm"
+type: "gorm"
+
+json:
+  path: "contacts.json"
+
+gorm:
+  path: "contacts.db"
